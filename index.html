@@ -4,36 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FocusFlow // Modern To-Do</title>
-    <!-- Tailwind CSS for sleek styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+
+        .picker-trigger {
+            cursor: pointer; user-select: none;
+        }
+
+        .picker-dropdown {
+            display: none;
+            animation: dropIn 0.2s ease;
+        }
+
+        .picker-dropdown.open { display: block; }
+
+        @keyframes dropIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .cal-day {
+            cursor: pointer; border-radius: 8px; padding: 0.4rem 0;
+            font-size: 0.85rem; transition: all 0.15s;
+        }
+
+        .cal-day:hover { background: #eef2ff; color: #4f46e5; }
+
+        .cal-day.other-month { color: #94a3b8; }
+
+        .cal-day.today { font-weight: 700; color: #4f46e5; }
+
+        .cal-day.selected {
+            background: #4f46e5; color: white; font-weight: 600;
+        }
+
+        .cal-day.selected:hover { background: #4338ca; color: white; }
+
+        .time-badge {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .time-badge.upcoming { background: #ecfdf5; color: #059669; }
+        .time-badge.due-soon { background: #fffbeb; color: #d97706; }
+        .time-badge.overdue { background: #fef2f2; color: #dc2626; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center p-4 sm:p-8">
 
     <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
-        
-        <!-- Left Column: Add Task Form & Stats -->
+
+        <!-- Left Column -->
         <div class="md:col-span-1 space-y-6">
             <div class="glass p-6 rounded-2xl border border-slate-200/80 shadow-sm">
                 <div class="flex items-center gap-2 mb-6">
                     <i data-lucide="check-square" class="w-6 h-6 text-indigo-600"></i>
                     <h1 class="text-xl font-bold tracking-tight text-slate-900">FocusFlow</h1>
                 </div>
-                
+
                 <form id="task-form" class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Task Title</label>
-                        <input type="text" id="task-title" required placeholder="What needs to be done?" 
+                        <input type="text" id="task-title" required placeholder="What needs to be done?"
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm">
                     </div>
-                    
+
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Notes / Description</label>
                         <textarea id="task-notes" placeholder="Add optional details..." rows="3"
@@ -50,18 +90,60 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Due Date</label>
-                            <input type="date" id="task-date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Schedule</label>
+                            <div class="picker-trigger w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm flex items-center gap-2 transition-all hover:border-indigo-400" id="pickerTrigger">
+                                <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+                                <span class="flex-1 text-slate-400 text-xs" id="pickerLabel">Set deadline</span>
+                            </div>
+                            <div class="picker-dropdown relative z-20" id="pickerDropdown">
+                                <div class="absolute top-1 left-0 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-4 mt-1">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <button type="button" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500" id="calPrev">
+                                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                                        </button>
+                                        <span class="text-sm font-semibold text-slate-800" id="calMonthYear"></span>
+                                        <button type="button" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500" id="calNext">
+                                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-0 text-center mb-2" id="calGrid"></div>
+                                    <div class="border-t border-slate-100 pt-3 mt-1">
+                                        <label class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 block">Time</label>
+                                        <div class="flex gap-2 items-center">
+                                            <select class="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-sm" id="hourSelect"></select>
+                                            <span class="text-slate-400 font-semibold">:</span>
+                                            <select class="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-sm" id="minuteSelect"></select>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 justify-end mt-3">
+                                        <button type="button" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" id="clearDateBtn">Clear</button>
+                                        <button type="button" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700" id="applyDateBtn">Apply</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2 text-sm">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Auto-remove task</label>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 transition-all flex-1">
+                                <input type="radio" name="keep-duration" value="48h" checked class="accent-indigo-600">
+                                <span class="text-xs font-medium text-slate-700">48 hours</span>
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 transition-all flex-1">
+                                <input type="radio" name="keep-duration" value="forever" class="accent-indigo-600">
+                                <span class="text-xs font-medium text-slate-700">Keep forever</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2 text-sm">
                         <i data-lucide="plus" class="w-4 h-4"></i> Add Task
                     </button>
                 </form>
             </div>
 
-            <!-- Stats Module -->
             <div class="glass p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Progress Tracker</h3>
                 <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
@@ -74,7 +156,7 @@
             </div>
         </div>
 
-        <!-- Right Column: Task List -->
+        <!-- Right Column -->
         <div class="md:col-span-2 space-y-4">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-lg font-semibold text-slate-900">Your Tasks</h2>
@@ -84,33 +166,164 @@
                     <button onclick="filterTasks('completed')" id="filter-completed" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Completed</button>
                 </div>
             </div>
-
-            <div id="task-container" class="space-y-3">
-                <!-- Tasks dynamically injected here -->
-            </div>
+            <div id="task-container" class="space-y-3"></div>
         </div>
     </div>
 
     <script>
+        const EXPIRY_MS = 48 * 60 * 60 * 1000;
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
         let currentFilter = 'all';
 
+        // Custom picker state
+        let pickerOpen = false;
+        let pickerYear, pickerMonth, pickerDate, pickerHour, pickerMinute;
+        const selectedSchedule = { value: null };
+        const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const DAYS = ['S','M','T','W','T','F','S'];
+
+        // DOM refs
         const taskForm = document.getElementById('task-form');
         const taskContainer = document.getElementById('task-container');
+        const pickerTrigger = document.getElementById('pickerTrigger');
+        const pickerLabel = document.getElementById('pickerLabel');
+        const pickerDropdown = document.getElementById('pickerDropdown');
+        const calGrid = document.getElementById('calGrid');
+        const calMonthYear = document.getElementById('calMonthYear');
+        const calPrev = document.getElementById('calPrev');
+        const calNext = document.getElementById('calNext');
+        const hourSelect = document.getElementById('hourSelect');
+        const minuteSelect = document.getElementById('minuteSelect');
+        const applyDateBtn = document.getElementById('applyDateBtn');
+        const clearDateBtn = document.getElementById('clearDateBtn');
 
+        // ========== AUTO-EXPIRE OLD TASKS (only 48h ones) ==========
+        function expireOldTasks() {
+            const now = Date.now();
+            const before = tasks.length;
+            tasks = tasks.filter(t => t.keepDuration !== '48h' || (now - t.createdAt) < EXPIRY_MS);
+            if (tasks.length !== before) {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }
+        }
+
+        // ========== CUSTOM CALENDAR PICKER ==========
+        function initPicker() {
+            const now = new Date();
+            pickerYear = now.getFullYear();
+            pickerMonth = now.getMonth();
+            pickerDate = now.getDate();
+            pickerHour = now.getHours();
+            pickerMinute = now.getMinutes();
+            populateTimeSelects();
+            renderCalendar();
+        }
+
+        function populateTimeSelects() {
+            hourSelect.innerHTML = '';
+            for (let i = 0; i < 24; i++) {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = String(i).padStart(2, '0');
+                if (i === pickerHour) opt.selected = true;
+                hourSelect.appendChild(opt);
+            }
+            minuteSelect.innerHTML = '';
+            for (let i = 0; i < 60; i += 5) {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = String(i).padStart(2, '0');
+                if (i === pickerMinute) opt.selected = true;
+                minuteSelect.appendChild(opt);
+            }
+        }
+
+        function renderCalendar() {
+            calMonthYear.textContent = MONTHS[pickerMonth] + ' ' + pickerYear;
+            const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
+            const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+            const daysInPrev = new Date(pickerYear, pickerMonth, 0).getDate();
+            const today = new Date();
+            const td = today.getDate(), tm = today.getMonth(), ty = today.getFullYear();
+
+            let html = DAYS.map(d => `<div class="text-xs font-semibold text-slate-400 py-1">${d}</div>`).join('');
+            for (let i = firstDay - 1; i >= 0; i--)
+                html += `<div class="cal-day other-month text-sm">${daysInPrev - i}</div>`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = d === td && pickerMonth === tm && pickerYear === ty;
+                const isSelected = d === pickerDate;
+                html += `<div class="cal-day text-sm${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" data-day="${d}">${d}</div>`;
+            }
+            const remaining = (7 - ((firstDay + daysInMonth) % 7)) % 7;
+            for (let d = 1; d <= remaining; d++)
+                html += `<div class="cal-day other-month text-sm">${d}</div>`;
+
+            calGrid.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function togglePicker(e) {
+            e.stopPropagation();
+            pickerOpen = !pickerOpen;
+            pickerDropdown.classList.toggle('open', pickerOpen);
+        }
+
+        function closePicker() {
+            pickerOpen = false;
+            pickerDropdown.classList.remove('open');
+        }
+
+        function applyPickerDate() {
+            const h = parseInt(hourSelect.value);
+            const m = parseInt(minuteSelect.value);
+            const d = new Date(pickerYear, pickerMonth, pickerDate, h, m);
+            selectedSchedule.value = d.getTime();
+            pickerLabel.textContent = String(pickerDate).padStart(2, '0') + ' ' + MONTHS[pickerMonth] + ' ' + pickerYear + '  ' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+            pickerLabel.classList.remove('text-slate-400');
+            pickerLabel.classList.add('text-slate-800', 'font-medium');
+            closePicker();
+        }
+
+        function clearPickerDate() {
+            selectedSchedule.value = null;
+            pickerLabel.textContent = 'Set deadline';
+            pickerLabel.classList.add('text-slate-400');
+            pickerLabel.classList.remove('text-slate-800', 'font-medium');
+            closePicker();
+        }
+
+        pickerTrigger.addEventListener('click', togglePicker);
+        document.addEventListener('click', (e) => {
+            if (pickerOpen && !pickerTrigger.contains(e.target) && !pickerDropdown.contains(e.target))
+                closePicker();
+        });
+        calGrid.addEventListener('click', (e) => {
+            const el = e.target.closest('.cal-day');
+            if (!el || el.classList.contains('other-month')) return;
+            pickerDate = parseInt(el.dataset.day);
+            renderCalendar();
+        });
+        calPrev.addEventListener('click', () => { pickerMonth--; if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; } renderCalendar(); });
+        calNext.addEventListener('click', () => { pickerMonth++; if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; } renderCalendar(); });
+        applyDateBtn.addEventListener('click', applyPickerDate);
+        clearDateBtn.addEventListener('click', clearPickerDate);
+
+        // ========== TASK CRUD ==========
         taskForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            const keepDuration = document.querySelector('input[name="keep-duration"]:checked').value;
             const newTask = {
                 id: Date.now(),
                 title: document.getElementById('task-title').value,
                 notes: document.getElementById('task-notes').value,
                 priority: document.getElementById('task-priority').value,
-                date: document.getElementById('task-date').value,
-                completed: false
+                scheduledAt: selectedSchedule.value,
+                keepDuration: keepDuration,
+                completed: false,
+                createdAt: Date.now()
             };
             tasks.push(newTask);
             saveAndRender();
             taskForm.reset();
+            clearPickerDate();
         });
 
         function saveAndRender() {
@@ -131,13 +344,11 @@
 
         function filterTasks(type) {
             currentFilter = type;
-            ['all', 'active', 'completed'].forEach(filter => {
-                const btn = document.getElementById(`filter-${filter}`);
-                if (filter === type) {
-                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100";
-                } else {
-                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100";
-                }
+            ['all', 'active', 'completed'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                btn.className = f === type
+                    ? "px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100"
+                    : "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100";
             });
             renderTasks();
         }
@@ -145,20 +356,43 @@
         function updateStats() {
             const total = tasks.length;
             const completed = tasks.filter(t => t.completed).length;
-            const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
-            
-            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+            document.getElementById('progress-bar').style.width = `${pct}%`;
             document.getElementById('stats-complete').innerText = `${completed} Completed`;
             document.getElementById('stats-total').innerText = `${total} Total Tasks`;
         }
 
+        // ========== SCHEDULE HELPERS ==========
+        function timeStatus(scheduledAt) {
+            if (!scheduledAt) return null;
+            const diff = scheduledAt - Date.now();
+            if (diff < 0) return 'overdue';
+            if (diff < 3600000) return 'due-soon';
+            return 'upcoming';
+        }
+
+        function formatTimeLeft(scheduledAt) {
+            if (!scheduledAt) return '';
+            const diff = scheduledAt - Date.now();
+            if (diff <= 0) return 'Overdue';
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+        }
+
+        function formatScheduleTime(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            return String(d.getDate()).padStart(2,'0') + ' ' + MONTHS[d.getMonth()] + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+        }
+
         function renderTasks() {
             taskContainer.innerHTML = '';
-            let filteredTasks = tasks;
-            if (currentFilter === 'active') filteredTasks = tasks.filter(t => !t.completed);
-            if (currentFilter === 'completed') filteredTasks = tasks.filter(t => t.completed);
+            let filtered = tasks;
+            if (currentFilter === 'active') filtered = tasks.filter(t => !t.completed);
+            if (currentFilter === 'completed') filtered = tasks.filter(t => t.completed);
 
-            if (filteredTasks.length === 0) {
+            if (filtered.length === 0) {
                 taskContainer.innerHTML = `
                     <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
                         <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
@@ -168,32 +402,35 @@
                 return;
             }
 
-            filteredTasks.forEach(task => {
-                const priorityClasses = {
-                    low: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                    medium: 'bg-amber-50 text-amber-700 border-amber-100',
-                    high: 'bg-rose-50 text-rose-700 border-rose-100'
-                };
+            const priorityClasses = {
+                low: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                medium: 'bg-amber-50 text-amber-700 border-amber-100',
+                high: 'bg-rose-50 text-rose-700 border-rose-100'
+            };
 
+            filtered.forEach(task => {
                 const div = document.createElement('div');
                 div.className = `glass p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4 transition-all duration-300 ${task.completed ? 'opacity-60 bg-slate-50/50' : ''}`;
-                
+
+                const status = timeStatus(task.scheduledAt);
+                const badgeClass = status === 'overdue' ? 'overdue' : status === 'due-soon' ? 'due-soon' : status === 'upcoming' ? 'upcoming' : '';
+
                 div.innerHTML = `
                     <button onclick="toggleTask(${task.id})" class="mt-1 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${task.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-500 bg-white'}">
                         ${task.completed ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''}
                     </button>
                     <div class="flex-1 space-y-1">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="font-semibold text-sm ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">${task.title}</h3>
-                            <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${priorityClasses[task.priority]}">
-                                ${task.priority}
-                            </span>
-                            ${task.date ? `
+                            <h3 class="font-semibold text-sm ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(task.title)}</h3>
+                            <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${priorityClasses[task.priority]}">${task.priority}</span>
+                            ${task.keepDuration === '48h' ? '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full border border-slate-200 text-slate-400">~48h</span>' : '<span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full border border-slate-200 text-indigo-400">∞</span>'}
+                            ${task.scheduledAt ? `
                             <span class="text-xs text-slate-400 flex items-center gap-1 ml-auto">
-                                <i data-lucide="calendar" class="w-3 h-3"></i> ${task.date}
-                            </span>` : ''}
+                                <i data-lucide="clock" class="w-3 h-3"></i> ${formatScheduleTime(task.scheduledAt)}
+                            </span>
+                            <span class="time-badge ${badgeClass}">${formatTimeLeft(task.scheduledAt)}</span>` : ''}
                         </div>
-                        ${task.notes ? `<p class="text-xs text-slate-500 leading-relaxed font-light">${task.notes.replace(/\n/g, '<br>')}</p>` : ''}
+                        ${task.notes ? `<p class="text-xs text-slate-500 leading-relaxed font-light">${escapeHtml(task.notes).replace(/\n/g, '<br>')}</p>` : ''}
                     </div>
                     <button onclick="deleteTask(${task.id})" class="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded-lg hover:bg-slate-100/80">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -204,9 +441,24 @@
             lucide.createIcons();
         }
 
-        // Initial setup
+        function escapeHtml(text) {
+            if (!text) return '';
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        // ========== INIT ==========
+        expireOldTasks();
+        initPicker();
         renderTasks();
         updateStats();
+
+        // ========== AUTO-REFRESH COUNTDOWN EVERY 30s ==========
+        setInterval(() => {
+            renderTasks();
+            updateStats();
+        }, 30000);
     </script>
 </body>
 </html>
