@@ -15,21 +15,9 @@
             cursor: pointer; user-select: none;
         }
 
-        .picker-dropdown {
-            display: none;
-            animation: dropIn 0.2s ease;
-        }
-
-        .picker-dropdown.open { display: block; }
-
-        @keyframes dropIn {
-            from { opacity: 0; transform: translateY(-6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         .cal-day {
-            cursor: pointer; border-radius: 8px; padding: 0.4rem 0;
-            font-size: 0.85rem; transition: all 0.15s;
+            cursor: pointer; border-radius: 8px; padding: 0.5rem 0;
+            font-size: 0.9rem; font-weight: 500; transition: all 0.15s;
         }
 
         .cal-day:hover { background: #eef2ff; color: #4f46e5; }
@@ -89,14 +77,14 @@
                                 <option value="high">High</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="relative" id="scheduleWrap">
                             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Schedule</label>
                             <div class="picker-trigger w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm flex items-center gap-2 transition-all hover:border-indigo-400" id="pickerTrigger">
                                 <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
                                 <span class="flex-1 text-slate-400 text-xs" id="pickerLabel">Set deadline</span>
                             </div>
-                            <div class="picker-dropdown relative z-20" id="pickerDropdown">
-                                <div class="absolute top-1 left-0 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-4 mt-1">
+                            <div class="picker-dropdown" id="pickerDropdown" style="display:none; position:fixed; inset:0; z-index:50; background:rgba(0,0,0,0.3); align-items:center; justify-content:center;">
+                                <div style="background:white; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.2); width:320px; max-width:90vw; padding:1.25rem; margin:auto;">
                                     <div class="flex items-center justify-between mb-3">
                                         <button type="button" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500" id="calPrev">
                                             <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -106,7 +94,7 @@
                                             <i data-lucide="chevron-right" class="w-4 h-4"></i>
                                         </button>
                                     </div>
-                                    <div class="grid grid-cols-7 gap-0 text-center mb-2" id="calGrid"></div>
+                                    <div class="grid grid-cols-7 gap-1 text-center mb-2" id="calGrid"></div>
                                     <div class="border-t border-slate-100 pt-3 mt-1">
                                         <label class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 block">Time</label>
                                         <div class="flex gap-2 items-center">
@@ -263,12 +251,12 @@
         function togglePicker(e) {
             e.stopPropagation();
             pickerOpen = !pickerOpen;
-            pickerDropdown.classList.toggle('open', pickerOpen);
+            pickerDropdown.style.display = pickerOpen ? 'flex' : 'none';
         }
 
         function closePicker() {
             pickerOpen = false;
-            pickerDropdown.classList.remove('open');
+            pickerDropdown.style.display = 'none';
         }
 
         function applyPickerDate() {
@@ -291,9 +279,8 @@
         }
 
         pickerTrigger.addEventListener('click', togglePicker);
-        document.addEventListener('click', (e) => {
-            if (pickerOpen && !pickerTrigger.contains(e.target) && !pickerDropdown.contains(e.target))
-                closePicker();
+        pickerDropdown.addEventListener('click', (e) => {
+            if (e.target === pickerDropdown) closePicker();
         });
         calGrid.addEventListener('click', (e) => {
             const el = e.target.closest('.cal-day');
