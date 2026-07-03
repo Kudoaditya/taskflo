@@ -1,757 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaskFlow - Smart Scheduler</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg: #0f0f12;
-      --fg: #f5f5f5;
-      --muted: #8b8b9e;
-      --accent: #00d4aa;
-      --accent-hover: #00e8bb;
-      --danger: #ff4757;
-      --warning: #f39c12;
-      --border: #2a2a3e;
-      --card: #161622;
-      --shadow: rgba(0, 212, 170, 0.15);
-    }
-
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f8f9fa;
-        --fg: #1a1a2e;
-        --muted: #6b6b7e;
-        --accent: #00b894;
-        --accent-hover: #00d4aa;
-        --danger: #e74c3c;
-        --warning: #e67e22;
-        --border: #e0e0e8;
-        --card: #ffffff;
-        --shadow: rgba(0, 184, 148, 0.15);
-      }
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--fg);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    .app { max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
-
-    header { text-align: center; margin-bottom: 2rem; }
-
-    h1 {
-      font-size: 2.5rem; font-weight: 700;
-      background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; margin-bottom: 0.25rem;
-    }
-
-    .subtitle { color: var(--muted); font-size: 0.95rem; }
-
-    .input-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
-    }
-
-    .input-row {
-      display: flex; gap: 0.75rem; margin-bottom: 0.75rem;
-    }
-
-    .task-input {
-      flex: 1; background: var(--bg); border: 2px solid var(--border);
-      border-radius: 10px; padding: 0.875rem 1rem; font-size: 1rem;
-      color: var(--fg); font-family: inherit;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .task-input:focus {
-      outline: none; border-color: var(--accent);
-      box-shadow: 0 0 0 4px var(--shadow);
-    }
-
-    .task-input::placeholder { color: var(--muted); }
-
-    .add-btn {
-      background: var(--accent); color: var(--bg); border: none;
-      border-radius: 10px; padding: 0.875rem 1.5rem;
-      font-size: 0.95rem; font-weight: 600; font-family: inherit;
-      cursor: pointer; transition: background 0.2s, transform 0.1s;
-      white-space: nowrap;
-    }
-
-    .add-btn:hover { background: var(--accent-hover); }
-    .add-btn:active { transform: scale(0.97); }
-
-    .picker-trigger {
-      display: flex; align-items: center; gap: 0.625rem;
-      background: var(--bg); border: 2px solid var(--border);
-      border-radius: 10px; padding: 0.625rem 1rem;
-      cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
-      user-select: none;
-    }
-
-    .picker-trigger:hover { border-color: var(--accent); }
-
-    .picker-trigger.open {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px var(--shadow);
-    }
-
-    .picker-trigger svg { width: 18px; height: 18px; stroke: var(--muted); flex-shrink: 0; }
-
-    .picker-trigger .picker-label {
-      flex: 1; font-size: 0.9rem; color: var(--muted);
-    }
-
-    .picker-trigger .picker-label.has-value { color: var(--fg); }
-
-    .picker-dropdown {
-      display: none; margin-top: 0.5rem;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 1rem;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      animation: dropIn 0.2s ease;
-    }
-
-    .picker-dropdown.open { display: block; }
-
-    @keyframes dropIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .cal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 0.75rem;
-    }
-
-    .cal-nav {
-      background: transparent; border: none; color: var(--muted);
-      cursor: pointer; padding: 0.375rem; border-radius: 6px;
-      display: flex; align-items: center; transition: all 0.2s;
-    }
-
-    .cal-nav:hover { background: rgba(255,255,255,0.05); color: var(--fg); }
-
-    .cal-nav svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; }
-
-    .cal-month-year {
-      font-size: 0.95rem; font-weight: 600; color: var(--fg);
-    }
-
-    .cal-grid {
-      display: grid; grid-template-columns: repeat(7, 1fr);
-      gap: 2px; text-align: center;
-    }
-
-    .cal-day-header {
-      font-size: 0.7rem; font-weight: 600; color: var(--muted);
-      padding: 0.375rem 0; text-transform: uppercase; letter-spacing: 0.5px;
-    }
-
-    .cal-day {
-      padding: 0.5rem 0; font-size: 0.85rem; border-radius: 8px;
-      cursor: pointer; transition: all 0.15s;
-    }
-
-    .cal-day:hover { background: rgba(0, 212, 170, 0.1); color: var(--accent); }
-
-    .cal-day.other-month { color: var(--muted); opacity: 0.35; }
-    .cal-day.other-month:hover { opacity: 0.6; }
-
-    .cal-day.today { font-weight: 600; color: var(--accent); }
-
-    .cal-day.selected {
-      background: var(--accent); color: var(--bg); font-weight: 600;
-    }
-
-    .cal-day.selected:hover { background: var(--accent-hover); color: var(--bg); }
-
-    .time-section {
-      margin-top: 0.75rem; padding-top: 0.75rem;
-      border-top: 1px solid var(--border);
-    }
-
-    .time-section-label {
-      font-size: 0.75rem; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;
-    }
-
-    .time-selectors {
-      display: flex; gap: 0.5rem; align-items: center;
-    }
-
-    .time-select {
-      flex: 1; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0.5rem; font-size: 0.9rem;
-      color: var(--fg); font-family: inherit; cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    .time-select:focus { outline: none; border-color: var(--accent); }
-
-    .time-select option { background: var(--card); color: var(--fg); }
-
-    .time-colon {
-      color: var(--muted); font-size: 1.25rem; font-weight: 600;
-    }
-
-    .picker-actions {
-      display: flex; gap: 0.5rem; margin-top: 0.75rem;
-      justify-content: flex-end;
-    }
-
-    .picker-btn {
-      padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8rem;
-      font-weight: 500; font-family: inherit; cursor: pointer;
-      border: 1px solid var(--border); transition: all 0.2s;
-    }
-
-    .picker-btn.clear {
-      background: transparent; color: var(--muted);
-    }
-
-    .picker-btn.clear:hover { border-color: var(--danger); color: var(--danger); }
-
-    .picker-btn.apply {
-      background: var(--accent); color: var(--bg); border-color: var(--accent);
-    }
-
-    .picker-btn.apply:hover { background: var(--accent-hover); }
-
-    .filters {
-      display: flex; gap: 0.5rem; justify-content: center;
-      margin-bottom: 1.25rem; flex-wrap: wrap;
-    }
-
-    .filter-btn {
-      background: var(--card); border: 2px solid var(--border);
-      color: var(--muted); border-radius: 8px; padding: 0.5rem 1rem;
-      font-size: 0.85rem; font-weight: 500; font-family: inherit;
-      cursor: pointer; transition: all 0.2s;
-    }
-
-    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    .filter-btn.active {
-      background: var(--accent); border-color: var(--accent); color: var(--bg);
-    }
-
-    .task-list { list-style: none; }
-
-    .task-item {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.75rem;
-      display: flex; align-items: flex-start; gap: 0.875rem;
-      transition: all 0.2s; animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .task-item:hover { border-color: var(--accent); box-shadow: 0 4px 20px var(--shadow); }
-
-    .task-item.expired { border-color: var(--danger); opacity: 0.6; }
-
-    .task-item.completed .task-text { text-decoration: line-through; color: var(--muted); }
-
-    .checkbox {
-      width: 22px; height: 22px; border: 2px solid var(--border);
-      border-radius: 6px; cursor: pointer; display: flex;
-      align-items: center; justify-content: center;
-      transition: all 0.2s; flex-shrink: 0; margin-top: 2px;
-    }
-
-    .checkbox:hover { border-color: var(--accent); }
-
-    .checkbox.checked { background: var(--accent); border-color: var(--accent); }
-
-    .checkbox svg { width: 14px; height: 14px; stroke: var(--bg); stroke-width: 3; }
-
-    .task-body { flex: 1; min-width: 0; }
-
-    .task-text { font-size: 1rem; word-break: break-word; transition: color 0.2s; display: block; }
-
-    .task-meta {
-      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-      margin-top: 0.375rem; font-size: 0.8rem; color: var(--muted);
-    }
-
-    .task-meta .label {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-    }
-
-    .task-meta .label svg { width: 14px; height: 14px; stroke: currentColor; }
-
-    .time-badge {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .time-badge.upcoming { background: rgba(0, 212, 170, 0.12); color: var(--accent); }
-
-    .time-badge.due-soon { background: rgba(243, 156, 18, 0.15); color: var(--warning); }
-
-    .time-badge.overdue { background: rgba(255, 71, 87, 0.15); color: var(--danger); }
-
-    .delete-btn {
-      background: transparent; border: none; color: var(--muted);
-      cursor: pointer; padding: 0.5rem; border-radius: 8px;
-      transition: all 0.2s; flex-shrink: 0; margin-top: 2px;
-    }
-
-    .delete-btn:hover { background: rgba(255, 71, 87, 0.1); color: var(--danger); }
-
-    .delete-btn svg { width: 20px; height: 20px; }
-
-    .empty-state {
-      text-align: center; padding: 3rem 1rem; color: var(--muted);
-    }
-
-    .empty-state svg { width: 72px; height: 72px; margin-bottom: 1rem; opacity: 0.4; }
-
-    .stats {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-top: 1.5rem; padding-top: 1.25rem;
-      border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem;
-    }
-
-    .clear-btn {
-      background: transparent; border: 1px solid var(--border);
-      color: var(--muted); border-radius: 8px; padding: 0.5rem 1rem;
-      font-size: 0.85rem; font-weight: 500; font-family: inherit;
-      cursor: pointer; transition: all 0.2s;
-    }
-
-    .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
-
-    .live-clock {
-      text-align: center; margin-bottom: 1rem; color: var(--muted);
-      font-size: 0.85rem; font-weight: 500;
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-    }
-
-    .live-clock svg { width: 16px; height: 16px; stroke: var(--accent); }
-
-    @media (max-width: 480px) {
-      .app { padding: 1.25rem 0.75rem; }
-      h1 { font-size: 2rem; }
-      .input-row { flex-direction: column; }
-      .add-btn { width: 100%; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFlow // Modern To-Do</title>
+    <!-- Tailwind CSS for sleek styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+    </style>
 </head>
-<body>
-  <div class="app">
-    <header>
-      <h1>TaskFlow</h1>
-      <p class="subtitle">Schedule smart, never miss a deadline</p>
-    </header>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center p-4 sm:p-8">
 
-    <div class="live-clock" id="liveClock">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-      </svg>
-      <span id="clockDisplay"></span>
-    </div>
-
-    <div class="input-card">
-      <div class="input-row">
-        <input type="text" class="task-input" id="taskInput" placeholder="What needs to be done?" autocomplete="off">
-        <button class="add-btn" id="addBtn">Add</button>
-      </div>
-      <div class="picker-trigger" id="pickerTrigger">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        <span class="picker-label" id="pickerLabel">Schedule deadline (optional)</span>
-      </div>
-      <div class="picker-dropdown" id="pickerDropdown">
-        <div class="cal-header">
-          <button class="cal-nav" id="calPrev">
-            <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-          </button>
-          <span class="cal-month-year" id="calMonthYear"></span>
-          <button class="cal-nav" id="calNext">
-            <svg viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18"></polyline></svg>
-          </button>
-        </div>
-        <div class="cal-grid" id="calGrid"></div>
-        <div class="time-section">
-          <div class="time-section-label">Time</div>
-          <div class="time-selectors">
-            <select class="time-select" id="hourSelect"></select>
-            <span class="time-colon">:</span>
-            <select class="time-select" id="minuteSelect"></select>
-          </div>
-        </div>
-        <div class="picker-actions">
-          <button class="picker-btn clear" id="clearDateBtn">Clear</button>
-          <button class="picker-btn apply" id="applyDateBtn">Apply</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="filters">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="active">Active</button>
-      <button class="filter-btn" data-filter="completed">Completed</button>
-    </div>
-
-    <ul class="task-list" id="taskList"></ul>
-
-    <div class="empty-state" id="emptyState" style="display: none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-      </svg>
-      <p>No tasks yet. Add one above!</p>
-    </div>
-
-    <div class="stats">
-      <span id="taskCount">0 tasks</span>
-      <button class="clear-btn" id="clearBtn">Clear Completed</button>
-    </div>
-  </div>
-
-  <script>
-    const STORAGE_KEY = 'taskflow-tasks';
-    const EXPIRY_MS = 48 * 60 * 60 * 1000;
-    let tasks = [];
-    let currentFilter = 'all';
-    let clockInterval;
-
-    let pickerOpen = false;
-    let pickerYear, pickerMonth, pickerDate, pickerHour, pickerMinute;
-    const selectedDate = { value: null };
-
-    const taskInput = document.getElementById('taskInput');
-    const addBtn = document.getElementById('addBtn');
-    const taskList = document.getElementById('taskList');
-    const emptyState = document.getElementById('emptyState');
-    const taskCount = document.getElementById('taskCount');
-    const clearBtn = document.getElementById('clearBtn');
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    const clockDisplay = document.getElementById('clockDisplay');
-    const pickerTrigger = document.getElementById('pickerTrigger');
-    const pickerLabel = document.getElementById('pickerLabel');
-    const pickerDropdown = document.getElementById('pickerDropdown');
-    const calGrid = document.getElementById('calGrid');
-    const calMonthYear = document.getElementById('calMonthYear');
-    const calPrev = document.getElementById('calPrev');
-    const calNext = document.getElementById('calNext');
-    const hourSelect = document.getElementById('hourSelect');
-    const minuteSelect = document.getElementById('minuteSelect');
-    const applyDateBtn = document.getElementById('applyDateBtn');
-    const clearDateBtn = document.getElementById('clearDateBtn');
-
-    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const DAYS = ['S','M','T','W','T','F','S'];
-
-    function pad(n) { return String(n).padStart(2, '0'); }
-
-    function updateClock() {
-      const now = new Date();
-      clockDisplay.textContent =
-        pad(now.getDate()) + ' ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear() +
-        '  ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-    }
-
-    function initPicker() {
-      const now = new Date();
-      pickerYear = now.getFullYear();
-      pickerMonth = now.getMonth();
-      pickerDate = now.getDate();
-      pickerHour = now.getHours();
-      pickerMinute = now.getMinutes();
-      populateTimeSelects();
-      renderCalendar();
-    }
-
-    function populateTimeSelects() {
-      hourSelect.innerHTML = '';
-      for (let i = 0; i < 24; i++) {
-        const opt = document.createElement('option');
-        opt.value = i; opt.textContent = pad(i);
-        if (i === pickerHour) opt.selected = true;
-        hourSelect.appendChild(opt);
-      }
-      minuteSelect.innerHTML = '';
-      for (let i = 0; i < 60; i += 5) {
-        const opt = document.createElement('option');
-        opt.value = i; opt.textContent = pad(i);
-        if (i === pickerMinute) opt.selected = true;
-        minuteSelect.appendChild(opt);
-      }
-    }
-
-    function renderCalendar() {
-      calMonthYear.textContent = MONTHS[pickerMonth] + ' ' + pickerYear;
-
-      const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
-      const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
-      const daysInPrev = new Date(pickerYear, pickerMonth, 0).getDate();
-
-      const today = new Date();
-      const td = today.getDate(), tm = today.getMonth(), ty = today.getFullYear();
-
-      let html = DAYS.map(d => `<div class="cal-day-header">${d}</div>`).join('');
-
-      for (let i = firstDay - 1; i >= 0; i--) {
-        html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
-      }
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const isToday = d === td && pickerMonth === tm && pickerYear === ty;
-        const isSelected = d === pickerDate;
-        html += `<div class="cal-day${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" data-day="${d}">${d}</div>`;
-      }
-
-      const totalCells = firstDay + daysInMonth;
-      const remaining = (7 - (totalCells % 7)) % 7;
-      for (let d = 1; d <= remaining; d++) {
-        html += `<div class="cal-day other-month">${d}</div>`;
-      }
-
-      calGrid.innerHTML = html;
-    }
-
-    function togglePicker(e) {
-      e.stopPropagation();
-      pickerOpen = !pickerOpen;
-      pickerTrigger.classList.toggle('open', pickerOpen);
-      pickerDropdown.classList.toggle('open', pickerOpen);
-    }
-
-    function closePicker() {
-      pickerOpen = false;
-      pickerTrigger.classList.remove('open');
-      pickerDropdown.classList.remove('open');
-    }
-
-    function applyPickerDate() {
-      const h = parseInt(hourSelect.value);
-      const m = parseInt(minuteSelect.value);
-      const d = new Date(pickerYear, pickerMonth, pickerDate, h, m);
-      selectedDate.value = d.getTime();
-
-      const label = pad(pickerDate) + ' ' + MONTHS[pickerMonth] + ' ' + pickerYear +
-        '  ' + pad(h) + ':' + pad(m);
-      pickerLabel.textContent = label;
-      pickerLabel.classList.add('has-value');
-      closePicker();
-    }
-
-    function clearPickerDate() {
-      selectedDate.value = null;
-      pickerLabel.textContent = 'Schedule deadline (optional)';
-      pickerLabel.classList.remove('has-value');
-      closePicker();
-    }
-
-    pickerTrigger.addEventListener('click', togglePicker);
-
-    document.addEventListener('click', (e) => {
-      if (pickerOpen && !pickerTrigger.contains(e.target) && !pickerDropdown.contains(e.target)) {
-        closePicker();
-      }
-    });
-
-    calGrid.addEventListener('click', (e) => {
-      const dayEl = e.target.closest('.cal-day');
-      if (!dayEl || dayEl.classList.contains('other-month')) return;
-      pickerDate = parseInt(dayEl.dataset.day);
-      renderCalendar();
-    });
-
-    calPrev.addEventListener('click', () => {
-      pickerMonth--;
-      if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; }
-      renderCalendar();
-    });
-
-    calNext.addEventListener('click', () => {
-      pickerMonth++;
-      if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; }
-      renderCalendar();
-    });
-
-    applyDateBtn.addEventListener('click', applyPickerDate);
-    clearDateBtn.addEventListener('click', clearPickerDate);
-
-    function loadTasks() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        tasks = JSON.parse(stored);
-        const now = Date.now();
-        const before = tasks.length;
-        tasks = tasks.filter(t => (now - t.createdAt) < EXPIRY_MS);
-        if (tasks.length !== before) saveTasks();
-      }
-      render();
-    }
-
-    function saveTasks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
-
-    function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
-
-    function addTask(text) {
-      const task = {
-        id: generateId(),
-        text: text.trim(),
-        completed: false,
-        createdAt: Date.now(),
-        scheduledAt: selectedDate.value
-      };
-      tasks.unshift(task);
-      saveTasks();
-      clearPickerDate();
-      render();
-    }
-
-    function toggleTask(id) {
-      const task = tasks.find(t => t.id === id);
-      if (task) { task.completed = !task.completed; saveTasks(); render(); }
-    }
-
-    function deleteTask(id) { tasks = tasks.filter(t => t.id !== id); saveTasks(); render(); }
-
-    function clearCompleted() { tasks = tasks.filter(t => !t.completed); saveTasks(); render(); }
-
-    function getFilteredTasks() {
-      switch (currentFilter) {
-        case 'active': return tasks.filter(t => !t.completed);
-        case 'completed': return tasks.filter(t => t.completed);
-        default: return tasks;
-      }
-    }
-
-    function timeStatus(scheduledAt) {
-      if (!scheduledAt) return null;
-      const diff = scheduledAt - Date.now();
-      if (diff < 0) return 'overdue';
-      if (diff < 3600000) return 'due-soon';
-      return 'upcoming';
-    }
-
-    function formatTimeLeft(scheduledAt) {
-      if (!scheduledAt) return '';
-      const diff = scheduledAt - Date.now();
-      if (diff <= 0) return 'Overdue';
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      if (h > 0) return `${h}h ${m}m left`;
-      return `${m}m left`;
-    }
-
-    function formatScheduleTime(scheduledAt) {
-      if (!scheduledAt) return '';
-      const d = new Date(scheduledAt);
-      return pad(d.getDate()) + ' ' + MONTHS[d.getMonth()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
-
-    function render() {
-      const filtered = getFilteredTasks();
-
-      if (filtered.length === 0) {
-        taskList.innerHTML = '';
-        emptyState.style.display = 'block';
-      } else {
-        emptyState.style.display = 'none';
-        taskList.innerHTML = filtered.map(task => {
-          const status = timeStatus(task.scheduledAt);
-          const badgeClass = status === 'overdue' ? 'overdue' : status === 'due-soon' ? 'due-soon' : status === 'upcoming' ? 'upcoming' : '';
-
-          return `
-            <li class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-              <div class="checkbox ${task.completed ? 'checked' : ''}" data-id="${task.id}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-              <div class="task-body">
-                <span class="task-text">${escapeHtml(task.text)}</span>
-                <div class="task-meta">
-                  ${task.scheduledAt ? `
-                    <span class="label">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                      </svg>
-                      ${formatScheduleTime(task.scheduledAt)}
-                    </span>
-                    <span class="time-badge ${badgeClass}">${formatTimeLeft(task.scheduledAt)}</span>
-                  ` : '<span class="label" style="opacity:0.6">No deadline</span>'}
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
+        
+        <!-- Left Column: Add Task Form & Stats -->
+        <div class="md:col-span-1 space-y-6">
+            <div class="glass p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center gap-2 mb-6">
+                    <i data-lucide="check-square" class="w-6 h-6 text-indigo-600"></i>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-900">FocusFlow</h1>
                 </div>
-              </div>
-              <button class="delete-btn" data-id="${task.id}" aria-label="Delete task">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                </svg>
-              </button>
-            </li>`;
-        }).join('');
-      }
+                
+                <form id="task-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Task Title</label>
+                        <input type="text" id="task-title" required placeholder="What needs to be done?" 
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Notes / Description</label>
+                        <textarea id="task-notes" placeholder="Add optional details..." rows="3"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm resize-none"></textarea>
+                    </div>
 
-      const activeCount = tasks.filter(t => !t.completed).length;
-      const totalCount = tasks.length;
-      taskCount.textContent = `${activeCount} of ${totalCount} tasks remaining`;
-    }
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Priority</label>
+                            <select id="task-priority" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Due Date</label>
+                            <input type="date" id="task-date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                        </div>
+                    </div>
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+                    <button type="submit" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Task
+                    </button>
+                </form>
+            </div>
 
-    function setFilter(filter) {
-      currentFilter = filter;
-      filterBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
-      render();
-    }
+            <!-- Stats Module -->
+            <div class="glass p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Progress Tracker</h3>
+                <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-xs font-medium text-slate-600">
+                    <span id="stats-complete">0 Completed</span>
+                    <span id="stats-total">0 Total Tasks</span>
+                </div>
+            </div>
+        </div>
 
-    addBtn.addEventListener('click', () => {
-      const text = taskInput.value.trim();
-      if (text) { addTask(text); taskInput.value = ''; taskInput.focus(); }
-    });
+        <!-- Right Column: Task List -->
+        <div class="md:col-span-2 space-y-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-lg font-semibold text-slate-900">Your Tasks</h2>
+                <div class="flex gap-2">
+                    <button onclick="filterTasks('all')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">All</button>
+                    <button onclick="filterTasks('active')" id="filter-active" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Active</button>
+                    <button onclick="filterTasks('completed')" id="filter-completed" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Completed</button>
+                </div>
+            </div>
 
-    taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn.click(); });
+            <div id="task-container" class="space-y-3">
+                <!-- Tasks dynamically injected here -->
+            </div>
+        </div>
+    </div>
 
-    taskList.addEventListener('click', (e) => {
-      const cb = e.target.closest('.checkbox');
-      const db = e.target.closest('.delete-btn');
-      if (cb) toggleTask(cb.dataset.id);
-      else if (db) deleteTask(db.dataset.id);
-    });
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let currentFilter = 'all';
 
-    filterBtns.forEach(btn => btn.addEventListener('click', () => setFilter(btn.dataset.filter)));
-    clearBtn.addEventListener('click', clearCompleted);
+        const taskForm = document.getElementById('task-form');
+        const taskContainer = document.getElementById('task-container');
 
-    clockInterval = setInterval(() => {
-      updateClock();
-      render();
-    }, 1000);
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newTask = {
+                id: Date.now(),
+                title: document.getElementById('task-title').value,
+                notes: document.getElementById('task-notes').value,
+                priority: document.getElementById('task-priority').value,
+                date: document.getElementById('task-date').value,
+                completed: false
+            };
+            tasks.push(newTask);
+            saveAndRender();
+            taskForm.reset();
+        });
 
-    initPicker();
-    loadTasks();
-    taskInput.focus();
-  </script>
+        function saveAndRender() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            renderTasks();
+            updateStats();
+        }
+
+        function toggleTask(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            saveAndRender();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveAndRender();
+        }
+
+        function filterTasks(type) {
+            currentFilter = type;
+            ['all', 'active', 'completed'].forEach(filter => {
+                const btn = document.getElementById(`filter-${filter}`);
+                if (filter === type) {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100";
+                }
+            });
+            renderTasks();
+        }
+
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.completed).length;
+            const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
+            
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            document.getElementById('stats-complete').innerText = `${completed} Completed`;
+            document.getElementById('stats-total').innerText = `${total} Total Tasks`;
+        }
+
+        function renderTasks() {
+            taskContainer.innerHTML = '';
+            let filteredTasks = tasks;
+            if (currentFilter === 'active') filteredTasks = tasks.filter(t => !t.completed);
+            if (currentFilter === 'completed') filteredTasks = tasks.filter(t => t.completed);
+
+            if (filteredTasks.length === 0) {
+                taskContainer.innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+                        <p class="text-sm text-slate-400 font-medium">No tasks found here.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            filteredTasks.forEach(task => {
+                const priorityClasses = {
+                    low: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    medium: 'bg-amber-50 text-amber-700 border-amber-100',
+                    high: 'bg-rose-50 text-rose-700 border-rose-100'
+                };
+
+                const div = document.createElement('div');
+                div.className = `glass p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4 transition-all duration-300 ${task.completed ? 'opacity-60 bg-slate-50/50' : ''}`;
+                
+                div.innerHTML = `
+                    <button onclick="toggleTask(${task.id})" class="mt-1 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${task.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-500 bg-white'}">
+                        ${task.completed ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''}
+                    </button>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="font-semibold text-sm ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">${task.title}</h3>
+                            <span class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${priorityClasses[task.priority]}">
+                                ${task.priority}
+                            </span>
+                            ${task.date ? `
+                            <span class="text-xs text-slate-400 flex items-center gap-1 ml-auto">
+                                <i data-lucide="calendar" class="w-3 h-3"></i> ${task.date}
+                            </span>` : ''}
+                        </div>
+                        ${task.notes ? `<p class="text-xs text-slate-500 leading-relaxed font-light">${task.notes.replace(/\n/g, '<br>')}</p>` : ''}
+                    </div>
+                    <button onclick="deleteTask(${task.id})" class="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded-lg hover:bg-slate-100/80">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                taskContainer.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        // Initial setup
+        renderTasks();
+        updateStats();
+    </script>
 </body>
 </html>
